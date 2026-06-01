@@ -14,12 +14,10 @@ import AdminPage       from '@/pages/AdminPage'
 import SuperAdminPage  from '@/pages/SuperAdminPage'
 import AppLayout       from '@/components/layout/AppLayout'
 
-const SUPERADMIN_EMAIL = 'skudeiro@gmail.com'
-
 function RequireAuth({ children }) {
   const { user, profile, loading } = useAuthStore()
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>
-  if (!user)    return <Navigate to="/auth" replace />
+  if (loading) return <Spinner />
+  if (!user) return <Navigate to="/auth" replace />
   if (!profile?.household_id) return <Navigate to="/onboard" replace />
   return children
 }
@@ -30,17 +28,9 @@ function RequireMaestro({ children }) {
   return children
 }
 
-function RequireSuperAdmin({ children }) {
-  const { user, loading } = useAuthStore()
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>
-  if (!user) return <Navigate to="/auth" replace />
-  if (user.email !== SUPERADMIN_EMAIL) return <Navigate to="/" replace />
-  return children
-}
-
 function Spinner() {
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3">
       <div className="text-4xl animate-bounce">🏠</div>
       <p className="text-sm text-gray-400">Cargando HomeTasks…</p>
     </div>
@@ -55,16 +45,13 @@ export default function App() {
     <BrowserRouter>
       <Toaster position="bottom-right" toastOptions={{ style: { fontFamily: 'DM Sans, sans-serif' } }} />
       <Routes>
+        {/* Superadmin - sin guards, se gestiona internamente */}
+        <Route path="/superadmin" element={<SuperAdminPage />} />
+
         <Route path="/auth"    element={<AuthPage />} />
         <Route path="/onboard" element={<OnboardPage />} />
 
-        <Route path="/superadmin" element={
-          <RequireSuperAdmin><SuperAdminPage /></RequireSuperAdmin>
-        } />
-
-        <Route path="/" element={
-          <RequireAuth><AppLayout /></RequireAuth>
-        }>
+        <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
           <Route index            element={<DashboardPage />} />
           <Route path="tareas"    element={<MyTasksPage />} />
           <Route path="historial" element={<HistoryPage />} />
