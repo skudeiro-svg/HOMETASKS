@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Trash2, RefreshCw, LogOut, ShieldAlert } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
@@ -6,8 +6,10 @@ import toast, { Toaster } from 'react-hot-toast'
 const SUPERADMIN_EMAIL = 'skudeiro@gmail.com'
 
 export default function SuperAdminPage() {
-  const [step, setStep] = useState('pin') // pin | panel
-  const [pin, setPin] = useState('')
+  const [step, setStep] = useState('login') // login | panel
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loggingIn, setLoggingIn] = useState(false)
   const [tab, setTab] = useState('households')
   const [households, setHouseholds] = useState([])
   const [users, setUsers] = useState([])
@@ -15,15 +17,15 @@ export default function SuperAdminPage() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const checkPin = () => {
-    // PIN simple hardcodeado - cámbialo por el que quieras
-    if (pin === '1234') {
-      setStep('panel')
-      load()
-    } else {
-      toast.error('PIN incorrecto')
-      setPin('')
-    }
+  const handleLogin = async () => {
+    if (!email || !password) return toast.error('Rellena todos los campos')
+    if (email !== SUPERADMIN_EMAIL) return toast.error('Acceso denegado')
+    setLoggingIn(true)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    setLoggingIn(false)
+    if (error) return toast.error('Credenciales incorrectas')
+    setStep('panel')
+    load()
   }
 
   const load = async () => {
@@ -102,28 +104,40 @@ export default function SuperAdminPage() {
     suspended: 'bg-red-900 text-red-300',
   }
 
-  if (step === 'pin') return (
+  // Login screen
+  if (step === 'login') return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
       <Toaster />
-      <div className="bg-gray-900 rounded-2xl p-8 w-full max-w-xs border border-gray-800 text-center">
-        <ShieldAlert className="text-red-400 mx-auto mb-4" size={32} />
-        <h1 className="font-bold text-white text-lg mb-1">SuperAdmin</h1>
-        <p className="text-gray-500 text-sm mb-6">Introduce el PIN de acceso</p>
-        <input
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-3 text-center text-white text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
-          type="password" maxLength={6} value={pin}
-          onChange={e => setPin(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && checkPin()}
-          placeholder="••••"
-        />
-        <button onClick={checkPin}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
-          Acceder
-        </button>
+      <div className="bg-gray-900 rounded-2xl p-8 w-full max-w-sm border border-gray-800">
+        <div className="flex items-center gap-2 mb-6">
+          <ShieldAlert className="text-red-400" size={22} />
+          <h1 className="font-bold text-white text-lg">SuperAdmin</h1>
+          <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full">BACKEND</span>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Email</label>
+            <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+              type="email" placeholder="admin@email.com" value={email}
+              onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Contraseña</label>
+            <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+              type="password" placeholder="••••••••" value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+          </div>
+          <button onClick={handleLogin} disabled={loggingIn}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
+            {loggingIn ? 'Verificando…' : 'Acceder al panel'}
+          </button>
+        </div>
       </div>
     </div>
   )
 
+  // Panel
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <Toaster />
@@ -135,7 +149,8 @@ export default function SuperAdminPage() {
         </div>
         <div className="flex items-center gap-3">
           <button onClick={load} className="text-gray-400 hover:text-white"><RefreshCw size={16} /></button>
-          <button onClick={() => setStep('pin')} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white">
+          <button onClick={() => { supabase.auth.signOut(); setStep('login') }}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white">
             <LogOut size={15} /> Salir
           </button>
         </div>
