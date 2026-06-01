@@ -9,6 +9,7 @@ export const useAuthStore = create((set, get) => ({
   init: async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
+      set({ user: session.user })
       await get().fetchProfile(session.user.id)
     }
     set({ loading: false })
@@ -30,7 +31,7 @@ export const useAuthStore = create((set, get) => ({
       .eq('id', userId)
       .single()
 
-    if (!error) set({ user: { id: userId }, profile: data })
+    if (!error) set({ profile: data })
     return data
   },
 
