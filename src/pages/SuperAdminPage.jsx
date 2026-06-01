@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { CheckCircle, XCircle, Trash2, RefreshCw, LogOut, Users, Home, ClipboardList, ShieldAlert } from 'lucide-react'
+import { Trash2, RefreshCw, LogOut, ShieldAlert } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
 const SUPERADMIN_EMAIL = 'skudeiro@gmail.com'
 
 export default function SuperAdminPage() {
-  const [session, setSession] = useState(null)
-  const [checking, setChecking] = useState(true)
+  const [authed, setAuthed] = useState(false)
   const [tab, setTab] = useState('households')
   const [households, setHouseholds] = useState([])
   const [users, setUsers] = useState([])
@@ -15,16 +14,10 @@ export default function SuperAdminPage() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(false)
 
+  // Siempre cerrar sesión de Supabase al entrar a esta página
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setChecking(false)
-    })
+    supabase.auth.signOut()
   }, [])
-
-  useEffect(() => {
-    if (session?.user?.email === SUPERADMIN_EMAIL) load()
-  }, [session])
 
   const load = async () => {
     setLoading(true)
@@ -46,6 +39,19 @@ export default function SuperAdminPage() {
     setLoading(false)
   }
 
+  const handleLogin = async (email, password) => {
+    if (email !== SUPERADMIN_EMAIL) return toast.error('Acceso denegado')
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return toast.error('Contraseña incorrecta')
+    setAuthed(true)
+    load()
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    setAuthed(false)
+  }
+
   const logAction = async (action, targetType, targetId, details) => {
     await supabase.from('admin_logs').insert({
       action, target_type: targetType, target_id: targetId,
@@ -57,7 +63,7 @@ export default function SuperAdminPage() {
     const { error } = await supabase.from('households').update({ status: 'approved' }).eq('id', id)
     if (error) return toast.error(error.message)
     await logAction('approve_household', 'household', id, { name })
-    toast.success(`✅ Hogar "${name}" aprobado`)
+    toast.success(`✅ "${name}" aprobado`)
     load()
   }
 
@@ -66,7 +72,7 @@ export default function SuperAdminPage() {
     const { error } = await supabase.from('households').update({ status: 'suspended' }).eq('id', id)
     if (error) return toast.error(error.message)
     await logAction('suspend_household', 'household', id, { name })
-    toast.success(`Hogar "${name}" suspendido`)
+    toast.success(`"${name}" suspendido`)
     load()
   }
 
@@ -75,7 +81,7 @@ export default function SuperAdminPage() {
     const { error } = await supabase.from('households').delete().eq('id', id)
     if (error) return toast.error(error.message)
     await logAction('delete_household', 'household', id, { name })
-    toast.success(`Hogar eliminado`)
+    toast.success('Hogar eliminado')
     load()
   }
 
@@ -83,7 +89,7 @@ export default function SuperAdminPage() {
     const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
     if (error) return toast.error(error.message)
     await logAction('change_role', 'profile', userId, { name, newRole })
-    toast.success(`Rol actualizado`)
+    toast.success('Rol actualizado')
     load()
   }
 
@@ -92,13 +98,8 @@ export default function SuperAdminPage() {
     const { error } = await supabase.from('profiles').delete().eq('id', userId)
     if (error) return toast.error(error.message)
     await logAction('delete_user', 'profile', userId, { name })
-    toast.success(`Usuario eliminado`)
+    toast.success('Usuario eliminado')
     load()
-  }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    setSession(null)
   }
 
   const STATUS_COLORS = {
@@ -107,36 +108,16 @@ export default function SuperAdminPage() {
     suspended: 'bg-red-900 text-red-300',
   }
 
-  // Loading
-  if (checking) return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">
-      <p className="text-gray-500">Verificando acceso…</p>
-    </div>
-  )
-
-  // Not logged in
-  if (!session) return (
+  if (!authed) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
       <Toaster />
       <div className="bg-gray-900 rounded-2xl p-8 w-full max-w-sm border border-gray-800">
         <div className="flex items-center gap-2 mb-6">
           <ShieldAlert className="text-red-400" size={20} />
-          <h1 className="font-bold text-white">SuperAdmin</h1>
+          <h1 className="font-bold text-white text-lg">SuperAdmin</h1>
+          <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full">BACKEND</span>
         </div>
-        <LoginForm onLogin={setSession} />
-      </div>
-    </div>
-  )
-
-  // Wrong email
-  if (session.user.email !== SUPERADMIN_EMAIL) return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">
-      <div className="text-center">
-        <p className="text-red-400 text-lg font-bold mb-2">Acceso denegado</p>
-        <p className="text-gray-500 text-sm mb-4">{session.user.email}</p>
-        <button onClick={handleSignOut} className="text-gray-400 hover:text-white text-sm">
-          Cerrar sesión
-        </button>
+        <LoginForm onLogin={handleLogin} />
       </div>
     </div>
   )
@@ -277,23 +258,29 @@ function LoginForm({ onLogin }) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
+    if (!email || !password) return toast.error('Rellena todos los campos')
     setLoading(true)
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    await onLogin(email, password)
     setLoading(false)
-    if (error) return toast.error(error.message)
-    onLogin(data.session)
   }
 
   return (
     <div className="space-y-4">
-      <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
-        type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-      <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
-        type="password" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} />
-      <button onClick={handleLogin} disabled={loading}
-        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg text-sm transition-colors disabled:opacity-50">
-        {loading ? 'Entrando…' : 'Acceder'}
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">Email</label>
+        <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+          type="email" placeholder="admin@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+      </div>
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">Contraseña</label>
+        <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
+          type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+      </div>
+      <button onClick={handleSubmit} disabled={loading}
+        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
+        {loading ? 'Verificando…' : 'Acceder al panel'}
       </button>
     </div>
   )
