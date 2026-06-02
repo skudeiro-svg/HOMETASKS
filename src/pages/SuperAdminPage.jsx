@@ -6,7 +6,7 @@ import toast, { Toaster } from 'react-hot-toast'
 const SUPERADMIN_EMAIL = 'skudeiro@gmail.com'
 
 export default function SuperAdminPage() {
-  const [step, setStep] = useState('login') // login | panel
+  const [step, setStep] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loggingIn, setLoggingIn] = useState(false)
@@ -38,7 +38,6 @@ export default function SuperAdminPage() {
     setHouseholds(h || [])
     setUsers(u || [])
     setLogs(l || [])
-
     const { count: totalHouseholds } = await supabase.from('households').select('*', { count: 'exact', head: true })
     const { count: totalUsers }      = await supabase.from('profiles').select('*', { count: 'exact', head: true })
     const { count: totalTasks }      = await supabase.from('task_assignments').select('*', { count: 'exact', head: true })
@@ -49,10 +48,7 @@ export default function SuperAdminPage() {
   }
 
   const logAction = async (action, targetType, targetId, details) => {
-    await supabase.from('admin_logs').insert({
-      action, target_type: targetType, target_id: targetId,
-      details, performed_by: SUPERADMIN_EMAIL
-    })
+    await supabase.from('admin_logs').insert({ action, target_type: targetType, target_id: targetId, details, performed_by: SUPERADMIN_EMAIL })
   }
 
   const approveHousehold = async (id, name) => {
@@ -73,10 +69,9 @@ export default function SuperAdminPage() {
   }
 
   const deleteHousehold = async (id, name) => {
-    if (!confirm(`¿ELIMINAR "${name}"? No se puede deshacer.`)) return
+    if (!confirm(`¿ELIMINAR "${name}"?`)) return
     const { error } = await supabase.from('households').delete().eq('id', id)
     if (error) return toast.error(error.message)
-    await logAction('delete_household', 'household', id, { name })
     toast.success('Hogar eliminado')
     load()
   }
@@ -84,7 +79,6 @@ export default function SuperAdminPage() {
   const changeUserRole = async (userId, newRole, name) => {
     const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
     if (error) return toast.error(error.message)
-    await logAction('change_role', 'profile', userId, { name, newRole })
     toast.success('Rol actualizado')
     load()
   }
@@ -93,43 +87,33 @@ export default function SuperAdminPage() {
     if (!confirm(`¿Eliminar a "${name}"?`)) return
     const { error } = await supabase.from('profiles').delete().eq('id', userId)
     if (error) return toast.error(error.message)
-    await logAction('delete_user', 'profile', userId, { name })
     toast.success('Usuario eliminado')
     load()
   }
 
-  const STATUS_COLORS = {
-    approved:  'bg-green-900 text-green-300',
-    pending:   'bg-yellow-900 text-yellow-300',
-    suspended: 'bg-red-900 text-red-300',
-  }
-
-  // Login screen
   if (step === 'login') return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+    <div style={{ minHeight:'100vh', background:'#030712', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
       <Toaster />
-      <div className="bg-gray-900 rounded-2xl p-8 w-full max-w-sm border border-gray-800">
-        <div className="flex items-center gap-2 mb-6">
-          <ShieldAlert className="text-red-400" size={22} />
-          <h1 className="font-bold text-white text-lg">SuperAdmin</h1>
-          <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full">BACKEND</span>
+      <div style={{ background:'#111827', borderRadius:'16px', padding:'32px', width:'100%', maxWidth:'360px', border:'1px solid #1f2937' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'24px' }}>
+          <span style={{ fontSize:'20px' }}>🛡️</span>
+          <span style={{ color:'white', fontWeight:'bold', fontSize:'18px' }}>SuperAdmin</span>
+          <span style={{ background:'#7f1d1d', color:'#fca5a5', fontSize:'11px', padding:'2px 8px', borderRadius:'99px' }}>BACKEND</span>
         </div>
-        <div className="space-y-4">
+        <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Email</label>
-            <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
-              type="email" placeholder="admin@email.com" value={email}
-              onChange={e => setEmail(e.target.value)} />
+            <label style={{ color:'#6b7280', fontSize:'12px', display:'block', marginBottom:'4px' }}>Email</label>
+            <input style={{ width:'100%', background:'#1f2937', border:'1px solid #374151', borderRadius:'8px', padding:'8px 12px', color:'white', fontSize:'14px', boxSizing:'border-box' }}
+              type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@email.com" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Contraseña</label>
-            <input className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-red-500"
-              type="password" placeholder="••••••••" value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+            <label style={{ color:'#6b7280', fontSize:'12px', display:'block', marginBottom:'4px' }}>Contraseña</label>
+            <input style={{ width:'100%', background:'#1f2937', border:'1px solid #374151', borderRadius:'8px', padding:'8px 12px', color:'white', fontSize:'14px', boxSizing:'border-box' }}
+              type="password" value={password} onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="••••••••" />
           </div>
           <button onClick={handleLogin} disabled={loggingIn}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
+            style={{ background:'#dc2626', color:'white', border:'none', borderRadius:'8px', padding:'10px', fontWeight:'600', fontSize:'14px', cursor:'pointer', opacity: loggingIn ? 0.5 : 1 }}>
             {loggingIn ? 'Verificando…' : 'Acceder al panel'}
           </button>
         </div>
@@ -137,132 +121,133 @@ export default function SuperAdminPage() {
     </div>
   )
 
-  // Panel
+  const STATUS_COLORS = {
+    approved:  { background:'#14532d', color:'#86efac' },
+    pending:   { background:'#713f12', color:'#fde68a' },
+    suspended: { background:'#7f1d1d', color:'#fca5a5' },
+  }
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div style={{ minHeight:'100vh', background:'#030712', color:'white' }}>
       <Toaster />
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <ShieldAlert className="text-red-400" size={22} />
-          <span className="font-bold text-lg">SuperAdmin</span>
-          <span className="text-xs bg-red-900 text-red-300 px-2 py-0.5 rounded-full">BACKEND</span>
+      <div style={{ background:'#111827', borderBottom:'1px solid #1f2937', padding:'16px 24px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+          <span>🛡️</span>
+          <span style={{ fontWeight:'bold', fontSize:'18px' }}>SuperAdmin</span>
+          <span style={{ background:'#7f1d1d', color:'#fca5a5', fontSize:'11px', padding:'2px 8px', borderRadius:'99px' }}>BACKEND</span>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={load} className="text-gray-400 hover:text-white"><RefreshCw size={16} /></button>
+        <div style={{ display:'flex', gap:'12px' }}>
+          <button onClick={load} style={{ background:'none', border:'none', color:'#9ca3af', cursor:'pointer', fontSize:'18px' }}>↻</button>
           <button onClick={() => { supabase.auth.signOut(); setStep('login') }}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white">
-            <LogOut size={15} /> Salir
+            style={{ background:'none', border:'none', color:'#9ca3af', cursor:'pointer', fontSize:'13px' }}>
+            Salir
           </button>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+      <div style={{ maxWidth:'800px', margin:'0 auto', padding:'24px 16px' }}>
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'12px', marginBottom:'24px' }}>
             {[
-              { label: 'Hogares',    value: stats.totalHouseholds, color: 'text-blue-400'    },
-              { label: 'Pendientes', value: stats.pending,         color: 'text-yellow-400'  },
-              { label: 'Usuarios',   value: stats.totalUsers,      color: 'text-purple-400'  },
-              { label: 'Tareas',     value: stats.totalTasks,      color: 'text-green-400'   },
-              { label: 'Validadas',  value: stats.validated,       color: 'text-emerald-400' },
+              { label:'Hogares',    value: stats.totalHouseholds, color:'#60a5fa' },
+              { label:'Pendientes', value: stats.pending,         color:'#fbbf24' },
+              { label:'Usuarios',   value: stats.totalUsers,      color:'#c084fc' },
+              { label:'Tareas',     value: stats.totalTasks,      color:'#4ade80' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-                <div className={`font-bold text-2xl ${color}`}>{value ?? '…'}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+              <div key={label} style={{ background:'#111827', borderRadius:'12px', padding:'16px', border:'1px solid #1f2937' }}>
+                <div style={{ fontSize:'28px', fontWeight:'bold', color }}>{value ?? '…'}</div>
+                <div style={{ fontSize:'12px', color:'#6b7280', marginTop:'4px' }}>{label}</div>
               </div>
             ))}
           </div>
         )}
 
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1 border border-gray-800">
+        <div style={{ display:'flex', gap:'4px', background:'#111827', borderRadius:'8px', padding:'4px', border:'1px solid #1f2937', marginBottom:'20px' }}>
           {[['households','🏠 Hogares'],['users','👥 Usuarios'],['logs','📋 Logs']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${
-                tab === id ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-gray-300'
-              }`}>
+              style={{ flex:1, padding:'8px', fontSize:'13px', fontWeight:'600', borderRadius:'6px', border:'none', cursor:'pointer',
+                background: tab === id ? '#374151' : 'transparent', color: tab === id ? 'white' : '#6b7280' }}>
               {label}
             </button>
           ))}
         </div>
 
-        {loading && <div className="text-gray-500 text-center py-10">Cargando…</div>}
+        {loading && <div style={{ color:'#6b7280', textAlign:'center', padding:'40px' }}>Cargando…</div>}
 
         {!loading && tab === 'households' && (
-          <div className="space-y-3">
+          <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
             {households.map(h => (
-              <div key={h.id} className="bg-gray-900 rounded-xl p-4 border border-gray-800 flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold">{h.name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[h.status] || 'bg-gray-700 text-gray-300'}`}>
+              <div key={h.id} style={{ background:'#111827', borderRadius:'12px', padding:'16px', border:'1px solid #1f2937', display:'flex', alignItems:'center', gap:'12px' }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+                    <span style={{ fontWeight:'600' }}>{h.name}</span>
+                    <span style={{ fontSize:'11px', padding:'2px 8px', borderRadius:'99px', fontWeight:'600', ...(STATUS_COLORS[h.status] || {}) }}>
                       {h.status}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">🔑 {h.invite_code} · 📅 {h.created_at?.split('T')[0]}</div>
+                  <div style={{ fontSize:'12px', color:'#6b7280', marginTop:'4px' }}>🔑 {h.invite_code} · {h.created_at?.split('T')[0]}</div>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div style={{ display:'flex', gap:'8px' }}>
                   {h.status !== 'approved' && (
                     <button onClick={() => approveHousehold(h.id, h.name)}
-                      className="text-xs bg-green-900 text-green-300 hover:bg-green-800 px-3 py-1.5 rounded-lg">
+                      style={{ background:'#14532d', color:'#86efac', border:'none', borderRadius:'8px', padding:'6px 12px', fontSize:'12px', cursor:'pointer' }}>
                       ✅ Aprobar
                     </button>
                   )}
                   {h.status === 'approved' && (
                     <button onClick={() => suspendHousehold(h.id, h.name)}
-                      className="text-xs bg-yellow-900 text-yellow-300 hover:bg-yellow-800 px-3 py-1.5 rounded-lg">
+                      style={{ background:'#713f12', color:'#fde68a', border:'none', borderRadius:'8px', padding:'6px 12px', fontSize:'12px', cursor:'pointer' }}>
                       ⏸ Suspender
                     </button>
                   )}
                   <button onClick={() => deleteHousehold(h.id, h.name)}
-                    className="text-gray-600 hover:text-red-400 p-1.5">
-                    <Trash2 size={14} />
+                    style={{ background:'none', border:'none', color:'#4b5563', cursor:'pointer', fontSize:'16px' }}>
+                    🗑
                   </button>
                 </div>
               </div>
             ))}
-            {!households.length && <p className="text-gray-600 text-center py-8">Sin hogares</p>}
+            {!households.length && <p style={{ color:'#4b5563', textAlign:'center', padding:'32px' }}>Sin hogares</p>}
           </div>
         )}
 
         {!loading && tab === 'users' && (
-          <div className="space-y-3">
+          <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
             {users.map(u => (
-              <div key={u.id} className="bg-gray-900 rounded-xl p-4 border border-gray-800 flex items-center gap-4">
-                <span className="text-2xl">{u.avatar_emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm">{u.full_name}</div>
-                  <div className="text-xs text-gray-500">🏠 {u.households?.name || 'Sin hogar'} · ⭐ {u.points} pts</div>
+              <div key={u.id} style={{ background:'#111827', borderRadius:'12px', padding:'16px', border:'1px solid #1f2937', display:'flex', alignItems:'center', gap:'12px' }}>
+                <span style={{ fontSize:'24px' }}>{u.avatar_emoji}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:'600', fontSize:'14px' }}>{u.full_name}</div>
+                  <div style={{ fontSize:'12px', color:'#6b7280' }}>🏠 {u.households?.name || 'Sin hogar'} · ⭐ {u.points} pts</div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
                   <select value={u.role} onChange={e => changeUserRole(u.id, e.target.value, u.full_name)}
-                    className="text-xs bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-gray-300 focus:outline-none">
+                    style={{ background:'#1f2937', border:'1px solid #374151', borderRadius:'8px', padding:'4px 8px', color:'#d1d5db', fontSize:'12px' }}>
                     <option value="aprendiz">🌱 Aprendiz</option>
                     <option value="maestro">⭐ Maestro</option>
                     <option value="admin">👑 Admin</option>
                   </select>
                   <button onClick={() => deleteUser(u.id, u.full_name)}
-                    className="text-gray-600 hover:text-red-400 p-1.5">
-                    <Trash2 size={14} />
+                    style={{ background:'none', border:'none', color:'#4b5563', cursor:'pointer', fontSize:'16px' }}>
+                    🗑
                   </button>
                 </div>
               </div>
             ))}
-            {!users.length && <p className="text-gray-600 text-center py-8">Sin usuarios</p>}
+            {!users.length && <p style={{ color:'#4b5563', textAlign:'center', padding:'32px' }}>Sin usuarios</p>}
           </div>
         )}
 
         {!loading && tab === 'logs' && (
-          <div className="space-y-2">
+          <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
             {logs.map(l => (
-              <div key={l.id} className="bg-gray-900 rounded-lg p-3 border border-gray-800 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-mono text-yellow-400">{l.action}</span>
-                  <span className="text-xs text-gray-500 ml-2">{JSON.stringify(l.details)}</span>
-                </div>
-                <span className="text-xs text-gray-600 shrink-0">{l.created_at?.split('T')[0]}</span>
+              <div key={l.id} style={{ background:'#111827', borderRadius:'8px', padding:'12px', border:'1px solid #1f2937', display:'flex', gap:'12px' }}>
+                <span style={{ fontSize:'12px', fontFamily:'monospace', color:'#fbbf24' }}>{l.action}</span>
+                <span style={{ fontSize:'12px', color:'#6b7280', flex:1 }}>{JSON.stringify(l.details)}</span>
+                <span style={{ fontSize:'12px', color:'#4b5563' }}>{l.created_at?.split('T')[0]}</span>
               </div>
             ))}
-            {!logs.length && <p className="text-gray-600 text-center py-8">Sin actividad</p>}
+            {!logs.length && <p style={{ color:'#4b5563', textAlign:'center', padding:'32px' }}>Sin actividad</p>}
           </div>
         )}
       </div>
